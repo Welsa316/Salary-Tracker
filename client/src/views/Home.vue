@@ -1,6 +1,5 @@
 <script setup>
-import { computed, inject, ref } from 'vue';
-import { api } from '../api';
+import { computed, inject } from 'vue';
 import {
   money,
   formatDate,
@@ -20,7 +19,7 @@ const props = defineProps({
 });
 
 const navigate = inject('navigate');
-const refresh  = inject('refresh');
+const openMarkPaid = inject('openMarkPaid');
 
 const currency = computed(() => props.settings?.currency || 'USD');
 const totalOwed = computed(() => props.summary?.total_owed ?? 0);
@@ -54,23 +53,12 @@ const upcomingDays = computed(() => {
     });
 });
 
-const marking = ref(false);
-async function markAllPaid() {
-  const msg = `Mark ${money(totalOwed.value, currency.value)} (${unpaidCount.value} session${
-    unpaidCount.value === 1 ? '' : 's'
-  }) as paid?`;
-  if (!confirm(msg)) return;
-  const ids = (props.sessions || [])
-    .filter((s) => !s.paid && Number(s.duration_hrs) > 0)
-    .map((s) => s.id);
-  if (ids.length === 0) return;
-  marking.value = true;
-  try {
-    await api.bulkMarkPaid(ids);
-    await refresh();
-  } finally {
-    marking.value = false;
-  }
+function markAllPaid() {
+  const unpaid = (props.sessions || []).filter(
+    (s) => !s.paid && Number(s.duration_hrs) > 0,
+  );
+  if (unpaid.length === 0) return;
+  openMarkPaid({ unpaid, total: totalOwed.value });
 }
 </script>
 
@@ -86,11 +74,10 @@ async function markAllPaid() {
       </div>
       <button
         v-if="unpaidCount > 0"
-        class="mt-4 rounded-full border border-terracotta/30 bg-terracotta/5 px-4 py-1.5 text-sm font-medium text-terracotta disabled:opacity-50"
-        :disabled="marking"
+        class="mt-4 rounded-full border border-terracotta/30 bg-terracotta/5 px-4 py-1.5 text-sm font-medium text-terracotta"
         @click="markAllPaid"
       >
-        {{ marking ? 'Marking…' : 'Mark all paid' }}
+        Mark all paid
       </button>
     </section>
 
