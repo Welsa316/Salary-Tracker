@@ -9,7 +9,6 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/summary',  require('./routes/summary'));
-app.use('/api/recurring', require('./routes/recurring'));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
