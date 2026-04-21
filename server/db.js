@@ -1,4 +1,8 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Return DATE (OID 1082) as a plain 'YYYY-MM-DD' string instead of a JS Date,
+// so JSON serialization doesn't push it through a timezone conversion.
+types.setTypeParser(1082, (v) => v);
 
 const connectionString = process.env.DATABASE_URL;
 

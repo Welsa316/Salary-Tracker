@@ -12,8 +12,16 @@ export function money(n, currency = 'USD') {
 
 export function parseDate(s) {
   if (!s) return null;
-  const [y, m, d] = s.split('-').map(Number);
+  const ymd = String(s).slice(0, 10);
+  const [y, m, d] = ymd.split('-').map(Number);
+  if (!y || !m || !d) return null;
   return new Date(y, m - 1, d);
+}
+
+// Normalizes any date-ish string to 'YYYY-MM-DD' (safe for <input type="date">).
+export function toDateInput(s) {
+  if (!s) return '';
+  return String(s).slice(0, 10);
 }
 
 export function formatDate(d, opts = { weekday: 'short', month: 'short', day: 'numeric' }) {

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, inject, onMounted } from 'vue';
 import { api } from '../api';
-import { money, todayISO, durationFromTimes } from '../utils';
+import { money, todayISO, durationFromTimes, toDateInput } from '../utils';
 
 const props = defineProps({
   settings: Object,
@@ -43,7 +43,7 @@ onMounted(() => {
   if (isEdit.value) {
     const s = props.sessions.find((x) => x.id === props.sessionId);
     if (s) {
-      form.value.session_date = s.session_date;
+      form.value.session_date = toDateInput(s.session_date);
       form.value.start_time = s.start_time ? s.start_time.slice(0, 5) : '';
       form.value.end_time   = s.end_time   ? s.end_time.slice(0, 5)   : '';
       form.value.duration_hrs = String(s.duration_hrs);
