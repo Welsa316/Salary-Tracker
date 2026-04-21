@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject, ref } from 'vue';
 import WeekGroup from '../components/WeekGroup.vue';
+import { api } from '../api';
 import { money, groupByWeek, groupByMonth, weekLabel, monthLabel } from '../utils';
 
 const props = defineProps({
@@ -10,10 +11,30 @@ const props = defineProps({
 });
 
 const navigate = inject('navigate');
+const refresh  = inject('refresh');
 
 const currency = computed(() => props.settings?.currency || 'USD');
 const totalOwed = computed(() => props.summary?.total_owed ?? 0);
 const unpaidCount = computed(() => props.summary?.unpaid_count ?? 0);
+
+const marking = ref(false);
+async function markAllPaid() {
+  const msg = `Mark ${money(totalOwed.value, currency.value)} (${unpaidCount.value} session${
+    unpaidCount.value === 1 ? '' : 's'
+  }) as paid?`;
+  if (!confirm(msg)) return;
+  const ids = (props.sessions || [])
+    .filter((s) => !s.paid && Number(s.duration_hrs) > 0)
+    .map((s) => s.id);
+  if (ids.length === 0) return;
+  marking.value = true;
+  try {
+    await api.bulkMarkPaid(ids);
+    await refresh();
+  } finally {
+    marking.value = false;
+  }
+}
 
 const period = ref(localStorage.getItem('tt:period') === 'month' ? 'month' : 'week');
 function setPeriod(p) {
@@ -61,6 +82,14 @@ const headerTitle = computed(() => {
       <div class="mt-1 text-sm text-ink/60">
         {{ unpaidCount }} unpaid session{{ unpaidCount === 1 ? '' : 's' }}
       </div>
+      <button
+        v-if="unpaidCount > 0"
+        class="mt-4 rounded-full border border-terracotta/30 bg-terracotta/5 px-4 py-1.5 text-sm font-medium text-terracotta disabled:opacity-50"
+        :disabled="marking"
+        @click="markAllPaid"
+      >
+        {{ marking ? 'Marking…' : 'Mark all paid' }}
+      </button>
     </section>
 
     <div class="mt-5 flex rounded-xl bg-ink/5 p-1 text-sm">
