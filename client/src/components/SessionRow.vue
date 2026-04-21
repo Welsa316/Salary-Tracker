@@ -1,7 +1,7 @@
 <script setup>
 import { computed, inject } from 'vue';
 import { api } from '../api';
-import { money, formatDate, sessionEarnings, parseDate, todayISO } from '../utils';
+import { money, formatDate, formatTime, sessionEarnings, parseDate, todayISO } from '../utils';
 
 const props = defineProps({
   session: Object,
@@ -22,6 +22,14 @@ const status = computed(() => {
 });
 
 const dateLabel = computed(() => formatDate(parseDate(props.session.session_date)));
+
+const timeRange = computed(() => {
+  const s = props.session.start_time;
+  const e = props.session.end_time;
+  if (!s && !e) return '';
+  if (s && e) return `${formatTime(s)} – ${formatTime(e)}`;
+  return formatTime(s || e);
+});
 
 async function togglePaid(ev) {
   ev.stopPropagation();
@@ -48,6 +56,7 @@ function openEdit() {
       <div class="text-sm font-medium">{{ dateLabel }}</div>
       <div class="text-xs text-ink/50">
         <template v-if="hours > 0">{{ hours.toFixed(2) }} hr · {{ money(earnings, currency) }}</template>
+        <template v-else-if="timeRange">{{ timeRange }}</template>
         <template v-else>Scheduled</template>
         <span v-if="session.notes"> · {{ session.notes }}</span>
       </div>

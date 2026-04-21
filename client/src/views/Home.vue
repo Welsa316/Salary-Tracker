@@ -121,12 +121,18 @@ const headerTitle = computed(() => {
     </div>
 
     <div class="fixed inset-x-0 bottom-0 px-4 pb-6 pt-3">
-      <div class="mx-auto max-w-xl">
+      <div class="mx-auto flex max-w-xl gap-2">
         <button
-          class="btn-primary w-full text-base shadow-lg shadow-terracotta/20"
-          @click="navigate({ name: 'session' })"
+          class="btn-outline flex-1 bg-white text-base shadow-md"
+          @click="navigate({ name: 'session', type: 'schedule' })"
         >
-          + Add Session
+          + Schedule
+        </button>
+        <button
+          class="btn-primary flex-1 text-base shadow-lg shadow-terracotta/20"
+          @click="navigate({ name: 'session', type: 'log' })"
+        >
+          + Log
         </button>
       </div>
     </div>

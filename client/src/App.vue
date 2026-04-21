@@ -71,6 +71,7 @@ onUnmounted(() => clearInterval(pollId));
       :settings="settings"
       :session-id="view.id"
       :sessions="sessions"
+      :initial-type="view.type || 'log'"
     />
     <Settings
       v-else-if="view.name === 'settings'"
