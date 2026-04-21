@@ -3,6 +3,7 @@ import { ref, provide, onMounted, onUnmounted } from 'vue';
 import Home from './views/Home.vue';
 import SessionForm from './views/SessionForm.vue';
 import Settings from './views/Settings.vue';
+import PaymentHistory from './views/PaymentHistory.vue';
 import MarkPaidModal from './components/MarkPaidModal.vue';
 import { api } from './api';
 
@@ -75,6 +76,10 @@ onUnmounted(() => clearInterval(pollId));
       v-else-if="view.name === 'settings'"
       :settings="settings"
       :summary="summary"
+    />
+    <PaymentHistory
+      v-else-if="view.name === 'payments'"
+      :settings="settings"
     />
 
     <MarkPaidModal

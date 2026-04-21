@@ -37,7 +37,7 @@ const headerTitle = computed(() => {
     </header>
 
     <section class="card mt-4 flex flex-col items-center py-8 text-center">
-      <div class="text-xs uppercase tracking-widest text-ink/50">You are owed</div>
+      <div class="text-xs uppercase tracking-widest text-ink/50">Balance due</div>
       <div class="mt-2 text-5xl font-bold tracking-tight text-terracotta">
         {{ money(totalOwed, currency) }}
       </div>

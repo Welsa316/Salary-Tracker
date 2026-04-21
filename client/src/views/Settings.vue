@@ -53,10 +53,6 @@ async function save() {
   }
 }
 
-function exportCsv() {
-  window.location.href = '/api/sessions';
-}
-
 async function downloadCsv() {
   const rows = await api.getSessions();
   const headers = ['date', 'start', 'end', 'hours', 'rate', 'earnings', 'paid', 'notes'];
@@ -142,6 +138,9 @@ const currency = computed(() => form.value.currency);
     <div class="my-8 h-px bg-ink/10"></div>
 
     <div class="space-y-3">
+      <button class="btn-outline w-full" @click="navigate({ name: 'payments' })">
+        Payment history
+      </button>
       <button class="btn-outline w-full" @click="downloadCsv">Export all sessions (CSV)</button>
     </div>
   </div>
