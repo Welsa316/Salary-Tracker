@@ -78,6 +78,45 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+router.post('/import', async (req, res, next) => {
+  const { sessions } = req.body || {};
+  if (!Array.isArray(sessions) || sessions.length === 0) {
+    return res.status(400).json({ error: 'sessions[] required' });
+  }
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+    let count = 0;
+    for (const s of sessions) {
+      if (!s.session_date) continue;
+      const paid = !!s.paid;
+      await client.query(
+        `INSERT INTO sessions
+           (session_date, start_time, end_time, duration_hrs, rate_snapshot, notes, paid, paid_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          s.session_date,
+          s.start_time || null,
+          s.end_time || null,
+          Number(s.duration_hrs) || 0,
+          Number(s.rate_snapshot),
+          s.notes || null,
+          paid,
+          paid ? new Date() : null,
+        ],
+      );
+      count++;
+    }
+    await client.query('COMMIT');
+    res.status(201).json({ inserted: count });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
 router.put('/:id', async (req, res, next) => {
   const { id } = req.params;
   const {
