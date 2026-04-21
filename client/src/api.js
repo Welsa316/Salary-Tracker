@@ -34,4 +34,8 @@ export const api = {
     request('PUT', '/api/schedule/week', { week_start, days }),
 
   getSummary:    () => request('GET', '/api/summary'),
+
+  getMe:         () => request('GET', '/api/auth/me'),
+  login:         (password) => request('POST', '/api/auth/login', { password }),
+  logout:        () => request('POST', '/api/auth/logout'),
 };

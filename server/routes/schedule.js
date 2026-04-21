@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { requireAdmin } = require('../auth');
 
 const router = express.Router();
 
@@ -26,7 +27,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.put('/week', async (req, res, next) => {
+router.put('/week', requireAdmin, async (req, res, next) => {
   const { week_start, days } = req.body || {};
   if (!week_start || !Array.isArray(days)) {
     return res.status(400).json({ error: 'week_start and days[] required' });
@@ -67,7 +68,7 @@ router.put('/week', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const result = await db.query('DELETE FROM schedule_days WHERE id = $1', [req.params.id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'not found' });

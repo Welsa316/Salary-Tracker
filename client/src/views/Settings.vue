@@ -10,6 +10,8 @@ const props = defineProps({
 
 const navigate = inject('navigate');
 const refresh  = inject('refresh');
+const refreshAuth = inject('refreshAuth');
+const isAdmin = inject('isAdmin');
 
 const form = ref({
   hourly_rate: props.settings?.hourly_rate ?? 25,
@@ -79,6 +81,34 @@ async function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
+const password = ref('');
+const loginError = ref(null);
+const loggingIn = ref(false);
+
+async function doLogin() {
+  loggingIn.value = true;
+  loginError.value = null;
+  try {
+    await api.login(password.value);
+    password.value = '';
+    await refreshAuth();
+    await refresh();
+  } catch (err) {
+    loginError.value = err.message.includes('401')
+      ? 'Wrong password'
+      : err.message;
+  } finally {
+    loggingIn.value = false;
+  }
+}
+
+async function doLogout() {
+  await api.logout();
+  await refreshAuth();
+  await refresh();
+  navigate({ name: 'home' });
+}
+
 const currency = computed(() => form.value.currency);
 </script>
 
@@ -89,56 +119,83 @@ const currency = computed(() => form.value.currency);
       <h1 class="text-lg font-semibold">Settings</h1>
     </header>
 
-    <div v-if="error" class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
+    <template v-if="!isAdmin">
+      <div v-if="loginError" class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        {{ loginError }}
+      </div>
+      <form class="space-y-4" @submit.prevent="doLogin">
+        <div>
+          <label class="label">Admin password</label>
+          <input
+            type="password"
+            v-model="password"
+            class="field"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+        <button type="submit" class="btn-primary w-full" :disabled="loggingIn">
+          {{ loggingIn ? 'Signing in…' : 'Sign in' }}
+        </button>
+        <p class="text-center text-xs text-ink/50">
+          Viewing the app doesn't need a login — only editing does.
+        </p>
+      </form>
+    </template>
 
-    <form class="space-y-5" @submit.prevent="save">
-      <div>
-        <label class="label">Hourly rate</label>
-        <input type="number" step="0.01" min="0" v-model="form.hourly_rate" class="field" />
+    <template v-else>
+      <div v-if="error" class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
+
+      <form class="space-y-5" @submit.prevent="save">
+        <div>
+          <label class="label">Hourly rate</label>
+          <input type="number" step="0.01" min="0" v-model="form.hourly_rate" class="field" />
+        </div>
+
+        <div>
+          <label class="label">Student name</label>
+          <input type="text" v-model="form.student_name" class="field" placeholder="Ahmed" />
+        </div>
+
+        <div>
+          <label class="label">Currency</label>
+          <select v-model="form.currency" class="field">
+            <option value="USD">USD — $</option>
+            <option value="EUR">EUR — €</option>
+            <option value="GBP">GBP — £</option>
+            <option value="CAD">CAD — CA$</option>
+            <option value="AUD">AUD — A$</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary w-full" :disabled="saving">
+          {{ saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save' }}
+        </button>
+      </form>
+
+      <div class="my-8 h-px bg-ink/10"></div>
+
+      <div class="space-y-3">
+        <div class="flex justify-between text-sm">
+          <span class="text-ink/60">Lifetime earnings</span>
+          <span class="font-medium">{{ money(summary?.total_earned ?? 0, currency) }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-ink/60">Lifetime paid</span>
+          <span class="font-medium">{{ money(summary?.total_paid ?? 0, currency) }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-ink/60">Sessions logged</span>
+          <span class="font-medium">{{ summary?.sessions_logged ?? 0 }}</span>
+        </div>
       </div>
 
-      <div>
-        <label class="label">Student name</label>
-        <input type="text" v-model="form.student_name" class="field" placeholder="Ahmed" />
+      <div class="my-8 h-px bg-ink/10"></div>
+
+      <div class="space-y-3">
+        <button class="btn-outline w-full" @click="downloadCsv">Export all sessions (CSV)</button>
+        <button class="btn-ghost w-full text-red-600" @click="doLogout">Log out</button>
       </div>
-
-      <div>
-        <label class="label">Currency</label>
-        <select v-model="form.currency" class="field">
-          <option value="USD">USD — $</option>
-          <option value="EUR">EUR — €</option>
-          <option value="GBP">GBP — £</option>
-          <option value="CAD">CAD — CA$</option>
-          <option value="AUD">AUD — A$</option>
-        </select>
-      </div>
-
-      <button type="submit" class="btn-primary w-full" :disabled="saving">
-        {{ saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save' }}
-      </button>
-    </form>
-
-    <div class="my-8 h-px bg-ink/10"></div>
-
-    <div class="space-y-3">
-      <div class="flex justify-between text-sm">
-        <span class="text-ink/60">Lifetime earnings</span>
-        <span class="font-medium">{{ money(summary?.total_earned ?? 0, currency) }}</span>
-      </div>
-      <div class="flex justify-between text-sm">
-        <span class="text-ink/60">Lifetime paid</span>
-        <span class="font-medium">{{ money(summary?.total_paid ?? 0, currency) }}</span>
-      </div>
-      <div class="flex justify-between text-sm">
-        <span class="text-ink/60">Sessions logged</span>
-        <span class="font-medium">{{ summary?.sessions_logged ?? 0 }}</span>
-      </div>
-    </div>
-
-    <div class="my-8 h-px bg-ink/10"></div>
-
-    <div class="space-y-3">
-      <button class="btn-outline w-full" @click="downloadCsv">Export all sessions (CSV)</button>
-    </div>
+    </template>
   </div>
 </template>

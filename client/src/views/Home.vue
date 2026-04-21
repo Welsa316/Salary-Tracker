@@ -20,6 +20,7 @@ const props = defineProps({
 
 const navigate = inject('navigate');
 const openMarkPaid = inject('openMarkPaid');
+const isAdmin = inject('isAdmin');
 
 const currency = computed(() => props.settings?.currency || 'USD');
 const totalOwed = computed(() => props.summary?.total_owed ?? 0);
@@ -73,7 +74,7 @@ function markAllPaid() {
         {{ unpaidCount }} unpaid session{{ unpaidCount === 1 ? '' : 's' }}
       </div>
       <button
-        v-if="unpaidCount > 0"
+        v-if="isAdmin && unpaidCount > 0"
         class="mt-4 rounded-full border border-terracotta/30 bg-terracotta/5 px-4 py-1.5 text-sm font-medium text-terracotta"
         @click="markAllPaid"
       >
@@ -112,7 +113,7 @@ function markAllPaid() {
       </div>
     </div>
 
-    <div class="fixed inset-x-0 bottom-0 px-4 pb-6 pt-3">
+    <div v-if="isAdmin" class="fixed inset-x-0 bottom-0 px-4 pb-6 pt-3">
       <div class="mx-auto max-w-xl">
         <button
           class="btn-primary w-full text-base shadow-lg shadow-terracotta/20"

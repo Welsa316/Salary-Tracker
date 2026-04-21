@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { requireAdmin } = require('../auth');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.get('/', async (_req, res, next) => {
   }
 });
 
-router.put('/', async (req, res, next) => {
+router.put('/', requireAdmin, async (req, res, next) => {
   const { hourly_rate, student_name, currency } = req.body;
   try {
     const { rows } = await db.query(

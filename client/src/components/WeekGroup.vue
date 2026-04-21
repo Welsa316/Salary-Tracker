@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const openMarkPaid = inject('openMarkPaid');
+const isAdmin = inject('isAdmin');
 
 const periodTotal = computed(() =>
   props.group.sessions.reduce((sum, s) => sum + sessionEarnings(s), 0),
@@ -61,7 +62,7 @@ const collapsed = ref(allPaid.value && props.group.sessions.some((s) => s.paid))
       />
 
       <div
-        v-if="unpaidInPeriod.length > 0"
+        v-if="isAdmin && unpaidInPeriod.length > 0"
         class="flex justify-end border-t border-ink/5 px-4 py-3"
       >
         <button

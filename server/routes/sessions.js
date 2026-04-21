@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { requireAdmin } = require('../auth');
 
 const router = express.Router();
 
@@ -46,7 +47,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requireAdmin, async (req, res, next) => {
   const {
     session_date,
     start_time,
@@ -78,7 +79,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.post('/import', async (req, res, next) => {
+router.post('/import', requireAdmin, async (req, res, next) => {
   const { sessions } = req.body || {};
   if (!Array.isArray(sessions) || sessions.length === 0) {
     return res.status(400).json({ error: 'sessions[] required' });
@@ -117,7 +118,7 @@ router.post('/import', async (req, res, next) => {
   }
 });
 
-router.post('/bulk/paid', async (req, res, next) => {
+router.post('/bulk/paid', requireAdmin, async (req, res, next) => {
   const { ids } = req.body || {};
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: 'ids[] required' });
@@ -136,7 +137,7 @@ router.post('/bulk/paid', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requireAdmin, async (req, res, next) => {
   const { id } = req.params;
   const {
     session_date,
@@ -176,7 +177,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const result = await db.query('DELETE FROM sessions WHERE id = $1', [req.params.id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'not found' });
@@ -186,7 +187,7 @@ router.delete('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/:id/paid', async (req, res, next) => {
+router.post('/:id/paid', requireAdmin, async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `UPDATE sessions
@@ -202,7 +203,7 @@ router.post('/:id/paid', async (req, res, next) => {
   }
 });
 
-router.post('/:id/unpaid', async (req, res, next) => {
+router.post('/:id/unpaid', requireAdmin, async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `UPDATE sessions

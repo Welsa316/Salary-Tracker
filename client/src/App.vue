@@ -20,19 +20,31 @@ const summary = ref(null);
 const sessions = ref([]);
 const schedule = ref([]);
 const loadError = ref(null);
+const isAdmin = ref(false);
+
+async function refreshAuth() {
+  try {
+    const { admin } = await api.getMe();
+    isAdmin.value = !!admin;
+  } catch {
+    isAdmin.value = false;
+  }
+}
 
 async function refresh() {
   try {
-    const [sData, setData, sumData, schedData] = await Promise.all([
+    const [sData, setData, sumData, schedData, authData] = await Promise.all([
       api.getSessions(),
       api.getSettings(),
       api.getSummary(),
       api.getSchedule(),
+      api.getMe(),
     ]);
     sessions.value = sData;
     settings.value = setData;
     summary.value  = sumData;
     schedule.value = schedData;
+    isAdmin.value  = !!authData.admin;
     loadError.value = null;
   } catch (err) {
     loadError.value = err.message;
@@ -55,6 +67,8 @@ function closeMarkPaid() {
 provide('navigate', navigate);
 provide('refresh',  refresh);
 provide('openMarkPaid', openMarkPaid);
+provide('isAdmin',  isAdmin);
+provide('refreshAuth', refreshAuth);
 
 const headerTitle = computed(() => {
   const name = settings.value?.student_name?.trim();

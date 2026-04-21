@@ -1,10 +1,14 @@
 const path = require('path');
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const { migrate } = require('./migrate');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 
+app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/schedule', require('./routes/schedule'));

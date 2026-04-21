@@ -9,6 +9,7 @@ const props = defineProps({
 });
 
 const navigate = inject('navigate');
+const isAdmin = inject('isAdmin');
 
 const currency = computed(() => props.settings?.currency || 'USD');
 
@@ -62,7 +63,7 @@ function labelFor(g) {
       />
     </div>
 
-    <div class="fixed inset-x-0 bottom-0 px-4 pb-6 pt-3">
+    <div v-if="isAdmin" class="fixed inset-x-0 bottom-0 px-4 pb-6 pt-3">
       <div class="mx-auto max-w-xl">
         <button
           class="btn-primary w-full text-base shadow-lg shadow-terracotta/20"

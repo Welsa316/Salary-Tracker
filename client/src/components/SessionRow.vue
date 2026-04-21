@@ -10,6 +10,7 @@ const props = defineProps({
 
 const navigate = inject('navigate');
 const refresh  = inject('refresh');
+const isAdmin  = inject('isAdmin');
 
 const earnings = computed(() => sessionEarnings(props.session));
 const hours = computed(() => Number(props.session.duration_hrs));
@@ -26,6 +27,7 @@ const timeRange = computed(() => {
 
 async function togglePaid(ev) {
   ev.stopPropagation();
+  if (!isAdmin.value) return;
   if (props.session.paid) {
     await api.markUnpaid(props.session.id);
   } else {
@@ -35,6 +37,7 @@ async function togglePaid(ev) {
 }
 
 function openEdit() {
+  if (!isAdmin.value) return;
   navigate({ name: 'session', id: props.session.id });
 }
 </script>
@@ -42,7 +45,8 @@ function openEdit() {
 <template>
   <button
     type="button"
-    class="flex w-full items-center gap-3 border-b border-ink/5 px-4 py-3 text-left last:border-b-0 hover:bg-ink/[0.02]"
+    class="flex w-full items-center gap-3 border-b border-ink/5 px-4 py-3 text-left last:border-b-0"
+    :class="isAdmin ? 'hover:bg-ink/[0.02]' : 'cursor-default'"
     @click="openEdit"
   >
     <div class="flex-1">
