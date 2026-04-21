@@ -1,0 +1,22 @@
+{
+  "name": "tutoring-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private tutoring session + payment tracker (Phase 1 MVP).",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "install:all": "npm install && npm install --prefix client",
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm install --prefix client && npm run build --prefix client",
+    "postinstall": "npm install --prefix client --include=dev && npm run build --prefix client",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}
