@@ -98,6 +98,34 @@ export function groupByWeek(sessions) {
   return Array.from(groups.values()).sort((a, b) => (a.key < b.key ? 1 : -1));
 }
 
+export function groupByMonth(sessions) {
+  const groups = new Map();
+  for (const s of sessions) {
+    const d = parseDate(s.session_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        start: new Date(d.getFullYear(), d.getMonth(), 1),
+        end: new Date(d.getFullYear(), d.getMonth() + 1, 0),
+        sessions: [],
+      });
+    }
+    groups.get(key).sessions.push(s);
+  }
+  return Array.from(groups.values()).sort((a, b) => (a.key < b.key ? 1 : -1));
+}
+
+export function monthLabel(group) {
+  const now = new Date();
+  const thisKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const lastDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth() + 1).padStart(2, '0')}`;
+  if (group.key === thisKey) return 'This month';
+  if (group.key === lastKey) return 'Last month';
+  return group.start.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
 export function weekLabel(group) {
   const now = new Date();
   const thisWeekStart = startOfWeek(now);

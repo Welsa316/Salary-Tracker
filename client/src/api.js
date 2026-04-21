@@ -32,4 +32,6 @@ export const api = {
   deletePayment: (id) => request('DELETE', `/api/payments/${id}`),
 
   getSummary:    () => request('GET', '/api/summary'),
+
+  applyRecurring: (weeks = 1) => request('POST', '/api/recurring/apply', { weeks }),
 };

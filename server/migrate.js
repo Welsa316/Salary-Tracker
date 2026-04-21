@@ -44,6 +44,9 @@ const STATEMENTS = [
   `INSERT INTO settings (id, hourly_rate, student_name, currency)
      VALUES (1, 25.00, NULL, 'USD')
      ON CONFLICT (id) DO NOTHING`,
+
+  `ALTER TABLE settings
+     ADD COLUMN IF NOT EXISTS recurring_schedule JSONB NOT NULL DEFAULT '[]'::jsonb`,
 ];
 
 async function migrate() {

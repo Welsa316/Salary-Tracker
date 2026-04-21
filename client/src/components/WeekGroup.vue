@@ -1,20 +1,22 @@
 <script setup>
 import { computed, ref, inject } from 'vue';
 import SessionRow from './SessionRow.vue';
-import { money, sessionEarnings, weekLabel } from '../utils';
+import { money, sessionEarnings } from '../utils';
 
 const props = defineProps({
   group: Object,
   currency: String,
+  label: String,
+  bulkLabel: { type: String, default: 'Mark week paid' },
 });
 
 const openMarkPaid = inject('openMarkPaid');
 
-const weekTotal = computed(() =>
+const periodTotal = computed(() =>
   props.group.sessions.reduce((sum, s) => sum + sessionEarnings(s), 0),
 );
 
-const unpaidInWeek = computed(() =>
+const unpaidInPeriod = computed(() =>
   props.group.sessions.filter((s) => !s.paid && Number(s.duration_hrs) > 0),
 );
 
@@ -25,8 +27,6 @@ const allPaid = computed(() =>
 const paidCount = computed(() =>
   props.group.sessions.filter((s) => s.paid).length,
 );
-
-const label = computed(() => weekLabel(props.group));
 
 const collapsed = ref(allPaid.value && props.group.sessions.some((s) => s.paid));
 </script>
@@ -48,7 +48,7 @@ const collapsed = ref(allPaid.value && props.group.sessions.some((s) => s.paid))
         </div>
       </div>
       <div class="text-right">
-        <div class="text-sm font-semibold">{{ money(weekTotal, currency) }}</div>
+        <div class="text-sm font-semibold">{{ money(periodTotal, currency) }}</div>
       </div>
     </header>
 
@@ -61,14 +61,14 @@ const collapsed = ref(allPaid.value && props.group.sessions.some((s) => s.paid))
       />
 
       <div
-        v-if="unpaidInWeek.length > 0"
+        v-if="unpaidInPeriod.length > 0"
         class="flex justify-end border-t border-ink/5 px-4 py-3"
       >
         <button
           class="btn-outline text-sm"
-          @click="openMarkPaid({ ...group, unpaid: unpaidInWeek, total: weekTotal })"
+          @click="openMarkPaid({ ...group, unpaid: unpaidInPeriod, total: periodTotal })"
         >
-          Mark week paid
+          {{ bulkLabel }}
         </button>
       </div>
     </div>
