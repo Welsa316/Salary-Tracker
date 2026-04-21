@@ -1,13 +1,22 @@
 <script setup>
 import { computed, inject, ref } from 'vue';
-import WeekGroup from '../components/WeekGroup.vue';
 import { api } from '../api';
-import { money, groupByWeek, groupByMonth, weekLabel, monthLabel } from '../utils';
+import {
+  money,
+  formatDate,
+  formatTime,
+  parseDate,
+  toISODate,
+  todayISO,
+  startOfWeek,
+  endOfWeek,
+} from '../utils';
 
 const props = defineProps({
   settings: Object,
   summary: Object,
   sessions: Array,
+  schedule: Array,
 });
 
 const navigate = inject('navigate');
@@ -16,6 +25,34 @@ const refresh  = inject('refresh');
 const currency = computed(() => props.settings?.currency || 'USD');
 const totalOwed = computed(() => props.summary?.total_owed ?? 0);
 const unpaidCount = computed(() => props.summary?.unpaid_count ?? 0);
+
+const today = new Date();
+const weekStart = startOfWeek(today);
+const weekEnd = endOfWeek(today);
+const weekStartIso = toISODate(weekStart);
+const weekEndIso = toISODate(weekEnd);
+
+const weekRangeLabel = computed(() => {
+  const s = formatDate(weekStart, { month: 'short', day: 'numeric' });
+  const e = formatDate(weekEnd,   { month: 'short', day: 'numeric' });
+  return `${s} – ${e}`;
+});
+
+const todayIso = todayISO();
+
+const upcomingDays = computed(() => {
+  const list = props.schedule || [];
+  return list
+    .filter((d) => {
+      const iso = String(d.day_date).slice(0, 10);
+      return iso >= todayIso && iso >= weekStartIso && iso <= weekEndIso;
+    })
+    .sort((a, b) => {
+      const aKey = `${String(a.day_date).slice(0, 10)} ${a.start_time}`;
+      const bKey = `${String(b.day_date).slice(0, 10)} ${b.start_time}`;
+      return aKey < bKey ? -1 : 1;
+    });
+});
 
 const marking = ref(false);
 async function markAllPaid() {
@@ -35,45 +72,10 @@ async function markAllPaid() {
     marking.value = false;
   }
 }
-
-const period = ref(localStorage.getItem('tt:period') === 'month' ? 'month' : 'week');
-function setPeriod(p) {
-  period.value = p;
-  localStorage.setItem('tt:period', p);
-}
-
-const groups = computed(() => {
-  const list = props.sessions || [];
-  return period.value === 'month' ? groupByMonth(list) : groupByWeek(list);
-});
-
-const bulkLabel = computed(() =>
-  period.value === 'month' ? 'Mark month paid' : 'Mark week paid',
-);
-
-function labelFor(g) {
-  return period.value === 'month' ? monthLabel(g) : weekLabel(g);
-}
-
-const headerTitle = computed(() => {
-  const name = props.settings?.student_name?.trim();
-  return name ? `Tutoring · ${name}` : 'Tutoring';
-});
 </script>
 
 <template>
   <div>
-    <header class="flex items-center justify-between">
-      <h1 class="text-lg font-semibold">{{ headerTitle }}</h1>
-      <button
-        class="btn-ghost px-2 py-2 text-xl"
-        aria-label="Settings"
-        @click="navigate({ name: 'settings' })"
-      >
-        ⚙
-      </button>
-    </header>
-
     <section class="card mt-4 flex flex-col items-center py-8 text-center">
       <div class="text-xs uppercase tracking-widest text-ink/50">Balance due</div>
       <div class="mt-2 text-5xl font-bold tracking-tight text-terracotta">
@@ -92,47 +94,44 @@ const headerTitle = computed(() => {
       </button>
     </section>
 
-    <div class="mt-5 flex rounded-xl bg-ink/5 p-1 text-sm">
-      <button
-        class="flex-1 rounded-lg py-1.5 transition"
-        :class="period === 'week' ? 'bg-white font-medium shadow-sm' : 'text-ink/60'"
-        @click="setPeriod('week')"
-      >Weekly</button>
-      <button
-        class="flex-1 rounded-lg py-1.5 transition"
-        :class="period === 'month' ? 'bg-white font-medium shadow-sm' : 'text-ink/60'"
-        @click="setPeriod('month')"
-      >Monthly</button>
+    <h2 class="mt-8 mb-3 text-xs font-semibold uppercase tracking-widest text-ink/50">
+      This week · {{ weekRangeLabel }}
+    </h2>
+
+    <div
+      v-if="upcomingDays.length === 0"
+      class="card px-4 py-8 text-center text-sm text-ink/50"
+    >
+      No sessions scheduled this week. Tap Plan week to add.
     </div>
 
-    <div v-if="groups.length === 0" class="mt-8 text-center text-ink/50">
-      No sessions yet. Tap + to add one.
-    </div>
-
-    <div v-else class="mt-5 space-y-5">
-      <WeekGroup
-        v-for="g in groups"
-        :key="g.key"
-        :group="g"
-        :currency="currency"
-        :label="labelFor(g)"
-        :bulk-label="bulkLabel"
-      />
+    <div v-else class="card divide-y divide-ink/5 overflow-hidden">
+      <div
+        v-for="day in upcomingDays"
+        :key="day.id"
+        class="flex items-center justify-between px-4 py-4"
+      >
+        <div>
+          <div class="text-lg font-semibold text-ink">
+            {{ formatDate(parseDate(day.day_date), { weekday: 'long' }) }}
+          </div>
+          <div class="text-xs uppercase tracking-wider text-ink/50">
+            {{ formatDate(parseDate(day.day_date), { month: 'short', day: 'numeric' }) }}
+          </div>
+        </div>
+        <div class="text-2xl font-bold tracking-tight text-terracotta tabular-nums">
+          {{ formatTime(day.start_time) }}
+        </div>
+      </div>
     </div>
 
     <div class="fixed inset-x-0 bottom-0 px-4 pb-6 pt-3">
-      <div class="mx-auto flex max-w-xl gap-2">
+      <div class="mx-auto max-w-xl">
         <button
-          class="btn-outline flex-1 bg-white text-base shadow-md"
+          class="btn-primary w-full text-base shadow-lg shadow-terracotta/20"
           @click="navigate({ name: 'schedule-week' })"
         >
-          + Schedule
-        </button>
-        <button
-          class="btn-primary flex-1 text-base shadow-lg shadow-terracotta/20"
-          @click="navigate({ name: 'session', type: 'log' })"
-        >
-          + Log
+          Plan week
         </button>
       </div>
     </div>

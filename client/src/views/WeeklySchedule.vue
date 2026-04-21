@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, inject } from 'vue';
 import { api } from '../api';
-import { parseDate, toISODate, startOfWeek, formatDate, todayISO } from '../utils';
+import { toISODate, startOfWeek, todayISO } from '../utils';
 
 const navigate = inject('navigate');
 const refresh  = inject('refresh');
@@ -30,7 +30,6 @@ const days = computed(() =>
   }),
 );
 
-const scheduled = ref([]);
 const form = ref({});
 const loading = ref(true);
 const saving = ref(false);
@@ -40,11 +39,10 @@ async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const all = await api.getSessions({ week: toISODate(weekStart.value) });
-    scheduled.value = all.filter((s) => Number(s.duration_hrs) === 0);
+    const rows = await api.getSchedule({ week: toISODate(weekStart.value) });
     const populated = {};
     for (const day of days.value) {
-      const existing = scheduled.value.find((s) => s.session_date === day.iso);
+      const existing = rows.find((r) => String(r.day_date).slice(0, 10) === day.iso);
       populated[day.iso] = existing?.start_time ? existing.start_time.slice(0, 5) : '';
     }
     form.value = populated;
@@ -55,39 +53,16 @@ async function load() {
   }
 }
 
-function existingFor(iso) {
-  return scheduled.value.find((s) => s.session_date === iso);
-}
-
 async function save() {
   saving.value = true;
   error.value = null;
   try {
-    const ops = [];
+    const payload = [];
     for (const day of days.value) {
-      const desired = (form.value[day.iso] || '').trim();
-      const existing = existingFor(day.iso);
-
-      if (desired && !existing) {
-        ops.push(api.createSession({
-          session_date: day.iso,
-          start_time: desired,
-          duration_hrs: 0,
-        }));
-      } else if (desired && existing) {
-        const currentStart = existing.start_time ? existing.start_time.slice(0, 5) : '';
-        if (currentStart !== desired) {
-          ops.push(api.updateSession(existing.id, {
-            session_date: day.iso,
-            start_time: desired,
-            duration_hrs: 0,
-          }));
-        }
-      } else if (!desired && existing) {
-        ops.push(api.deleteSession(existing.id));
-      }
+      const t = (form.value[day.iso] || '').trim();
+      if (t) payload.push({ day_date: day.iso, start_time: t });
     }
-    await Promise.all(ops);
+    await api.putScheduleWeek(toISODate(weekStart.value), payload);
     await refresh();
     navigate({ name: 'home' });
   } catch (err) {
@@ -121,7 +96,7 @@ onMounted(load);
   <div>
     <header class="mb-5 flex items-center gap-3">
       <button class="btn-ghost px-2 py-2" @click="navigate({ name: 'home' })">←</button>
-      <h1 class="text-lg font-semibold">Schedule week</h1>
+      <h1 class="text-lg font-semibold">Plan week</h1>
     </header>
 
     <div v-if="error" class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>

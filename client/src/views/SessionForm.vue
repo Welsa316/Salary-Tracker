@@ -7,15 +7,13 @@ const props = defineProps({
   settings: Object,
   sessionId: String,
   sessions: Array,
-  initialType: { type: String, default: 'log' }, // 'log' | 'schedule'
 });
 
 const navigate = inject('navigate');
 const refresh  = inject('refresh');
 
 const isEdit = computed(() => !!props.sessionId);
-const type = ref(props.initialType);    // 'log' | 'schedule'
-const mode = ref('times');                // 'times' | 'hours'
+const mode = ref('times'); // 'times' | 'hours'
 
 const form = ref({
   session_date: todayISO(),
@@ -29,7 +27,6 @@ const rate = computed(() => Number(props.settings?.hourly_rate ?? 25));
 const currency = computed(() => props.settings?.currency || 'USD');
 
 const duration = computed(() => {
-  if (type.value === 'schedule') return 0;
   if (mode.value === 'times') {
     return durationFromTimes(form.value.start_time, form.value.end_time);
   }
@@ -52,9 +49,6 @@ onMounted(() => {
       form.value.duration_hrs = String(s.duration_hrs);
       form.value.notes = s.notes || '';
       mode.value = s.start_time && s.end_time ? 'times' : 'hours';
-      const isScheduled =
-        Number(s.duration_hrs) === 0 && toDateInput(s.session_date) >= todayISO();
-      type.value = isScheduled ? 'schedule' : 'log';
     }
   }
 });
@@ -69,22 +63,18 @@ watch(mode, (m) => {
   }
 });
 
-watch(type, (t) => {
-  if (t === 'schedule') {
-    mode.value = 'times';
-    form.value.duration_hrs = '';
-  }
-});
-
 async function save() {
+  if (duration.value <= 0) {
+    error.value = 'Duration must be greater than 0';
+    return;
+  }
   saving.value = true;
   error.value = null;
   try {
-    const useTimes = type.value === 'schedule' || mode.value === 'times';
     const payload = {
       session_date: form.value.session_date,
-      start_time: useTimes ? form.value.start_time || null : null,
-      end_time:   useTimes ? form.value.end_time   || null : null,
+      start_time: mode.value === 'times' ? form.value.start_time || null : null,
+      end_time:   mode.value === 'times' ? form.value.end_time   || null : null,
       duration_hrs: duration.value,
       notes: form.value.notes?.trim() || null,
     };
@@ -108,47 +98,24 @@ async function remove() {
   await refresh();
   navigate({ name: 'home' });
 }
-
-const heading = computed(() => {
-  if (isEdit.value) return 'Edit Session';
-  return type.value === 'schedule' ? 'Schedule Session' : 'Log Session';
-});
 </script>
 
 <template>
   <div>
     <header class="mb-5 flex items-center gap-3">
       <button class="btn-ghost px-2 py-2" @click="navigate({ name: 'home' })">←</button>
-      <h1 class="text-lg font-semibold">{{ heading }}</h1>
+      <h1 class="text-lg font-semibold">{{ isEdit ? 'Edit Session' : 'Log Session' }}</h1>
     </header>
 
     <div v-if="error" class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
 
     <form class="space-y-5" @submit.prevent="save">
       <div>
-        <label class="label">Type</label>
-        <div class="flex rounded-xl bg-ink/5 p-1 text-sm">
-          <button
-            type="button"
-            class="flex-1 rounded-lg py-1.5 transition"
-            :class="type === 'log' ? 'bg-white font-medium shadow-sm' : 'text-ink/60'"
-            @click="type = 'log'"
-          >Log (done)</button>
-          <button
-            type="button"
-            class="flex-1 rounded-lg py-1.5 transition"
-            :class="type === 'schedule' ? 'bg-white font-medium shadow-sm' : 'text-ink/60'"
-            @click="type = 'schedule'"
-          >Schedule (planned)</button>
-        </div>
-      </div>
-
-      <div>
         <label class="label">Date</label>
         <input type="date" v-model="form.session_date" class="field" required />
       </div>
 
-      <div v-if="type === 'log'">
+      <div>
         <label class="label">Time</label>
         <div class="flex gap-2">
           <button
@@ -170,7 +137,7 @@ const heading = computed(() => {
         </div>
       </div>
 
-      <div v-if="type === 'schedule' || mode === 'times'" class="grid grid-cols-2 gap-3">
+      <div v-if="mode === 'times'" class="grid grid-cols-2 gap-3">
         <div>
           <label class="label">Start</label>
           <input type="time" v-model="form.start_time" class="field" />
@@ -181,7 +148,7 @@ const heading = computed(() => {
         </div>
       </div>
 
-      <div v-if="type === 'log' && mode === 'hours'">
+      <div v-else>
         <label class="label">Duration (hours)</label>
         <input
           type="number"
@@ -193,10 +160,7 @@ const heading = computed(() => {
         />
       </div>
 
-      <div
-        v-if="type === 'log'"
-        class="flex items-center justify-between rounded-xl bg-ink/[0.03] px-4 py-3"
-      >
+      <div class="flex items-center justify-between rounded-xl bg-ink/[0.03] px-4 py-3">
         <div class="text-sm text-ink/60">
           {{ duration.toFixed(2) }} hr × {{ money(rate, currency) }}
         </div>
@@ -213,7 +177,7 @@ const heading = computed(() => {
       </div>
 
       <button type="submit" class="btn-primary w-full" :disabled="saving">
-        {{ saving ? 'Saving…' : type === 'schedule' ? 'Save on Schedule' : 'Save Session' }}
+        {{ saving ? 'Saving…' : 'Save Session' }}
       </button>
 
       <div class="flex items-center justify-center gap-6 pt-2 text-sm">

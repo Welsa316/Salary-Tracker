@@ -7,7 +7,7 @@ app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/sessions', require('./routes/sessions'));
-app.use('/api/payments', require('./routes/payments'));
+app.use('/api/schedule', require('./routes/schedule'));
 app.use('/api/summary',  require('./routes/summary'));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));

@@ -12,24 +12,26 @@ async function request(method, url, body) {
   return res.json();
 }
 
+function qs(params) {
+  const s = new URLSearchParams(params).toString();
+  return s ? '?' + s : '';
+}
+
 export const api = {
   getSettings:   () => request('GET', '/api/settings'),
   putSettings:   (patch) => request('PUT', '/api/settings', patch),
 
-  getSessions:   (params = {}) => {
-    const q = new URLSearchParams(params).toString();
-    return request('GET', `/api/sessions${q ? '?' + q : ''}`);
-  },
+  getSessions:   (params = {}) => request('GET', `/api/sessions${qs(params)}`),
   createSession: (data) => request('POST', '/api/sessions', data),
   updateSession: (id, data) => request('PUT', `/api/sessions/${id}`, data),
   deleteSession: (id) => request('DELETE', `/api/sessions/${id}`),
-  markPaid:      (id, payment_id) => request('POST', `/api/sessions/${id}/paid`, { payment_id }),
+  markPaid:      (id) => request('POST', `/api/sessions/${id}/paid`),
   markUnpaid:    (id) => request('POST', `/api/sessions/${id}/unpaid`),
-  bulkMarkPaid:  (ids, payment_id) => request('POST', '/api/sessions/bulk/paid', { ids, payment_id }),
+  bulkMarkPaid:  (ids) => request('POST', '/api/sessions/bulk/paid', { ids }),
 
-  getPayments:   () => request('GET', '/api/payments'),
-  createPayment: (data) => request('POST', '/api/payments', data),
-  deletePayment: (id) => request('DELETE', `/api/payments/${id}`),
+  getSchedule:     (params = {}) => request('GET', `/api/schedule${qs(params)}`),
+  putScheduleWeek: (week_start, days) =>
+    request('PUT', '/api/schedule/week', { week_start, days }),
 
   getSummary:    () => request('GET', '/api/summary'),
 };

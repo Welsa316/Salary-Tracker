@@ -44,6 +44,17 @@ const STATEMENTS = [
   `INSERT INTO settings (id, hourly_rate, student_name, currency)
      VALUES (1, 25.00, NULL, 'USD')
      ON CONFLICT (id) DO NOTHING`,
+
+  `CREATE TABLE IF NOT EXISTS schedule_days (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    day_date    DATE NOT NULL,
+    start_time  TIME NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT schedule_days_day_unique UNIQUE (day_date)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_schedule_days_date ON schedule_days (day_date)`,
 ];
 
 async function migrate() {

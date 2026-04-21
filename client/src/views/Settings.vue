@@ -138,9 +138,6 @@ const currency = computed(() => form.value.currency);
     <div class="my-8 h-px bg-ink/10"></div>
 
     <div class="space-y-3">
-      <button class="btn-outline w-full" @click="navigate({ name: 'payments' })">
-        Payment history
-      </button>
       <button class="btn-outline w-full" @click="downloadCsv">Export all sessions (CSV)</button>
     </div>
   </div>
