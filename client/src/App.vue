@@ -4,6 +4,7 @@ import Home from './views/Home.vue';
 import SessionForm from './views/SessionForm.vue';
 import Settings from './views/Settings.vue';
 import PaymentHistory from './views/PaymentHistory.vue';
+import WeeklySchedule from './views/WeeklySchedule.vue';
 import MarkPaidModal from './components/MarkPaidModal.vue';
 import { api } from './api';
 
@@ -82,6 +83,7 @@ onUnmounted(() => clearInterval(pollId));
       v-else-if="view.name === 'payments'"
       :settings="settings"
     />
+    <WeeklySchedule v-else-if="view.name === 'schedule-week'" />
 
     <MarkPaidModal
       v-if="paidModal"

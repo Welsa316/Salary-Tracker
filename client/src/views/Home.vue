@@ -124,7 +124,7 @@ const headerTitle = computed(() => {
       <div class="mx-auto flex max-w-xl gap-2">
         <button
           class="btn-outline flex-1 bg-white text-base shadow-md"
-          @click="navigate({ name: 'session', type: 'schedule' })"
+          @click="navigate({ name: 'schedule-week' })"
         >
           + Schedule
         </button>
