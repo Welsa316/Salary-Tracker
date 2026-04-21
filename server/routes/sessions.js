@@ -117,6 +117,25 @@ router.post('/import', async (req, res, next) => {
   }
 });
 
+router.post('/bulk/paid', async (req, res, next) => {
+  const { ids } = req.body || {};
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids[] required' });
+  }
+  try {
+    const { rows } = await db.query(
+      `UPDATE sessions
+         SET paid = true, paid_at = NOW(), updated_at = NOW()
+       WHERE id = ANY($1::uuid[])
+       RETURNING *`,
+      [ids],
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/:id', async (req, res, next) => {
   const { id } = req.params;
   const {
@@ -194,25 +213,6 @@ router.post('/:id/unpaid', async (req, res, next) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'not found' });
     res.json(rows[0]);
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/bulk/paid', async (req, res, next) => {
-  const { ids } = req.body || {};
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ error: 'ids[] required' });
-  }
-  try {
-    const { rows } = await db.query(
-      `UPDATE sessions
-         SET paid = true, paid_at = NOW(), updated_at = NOW()
-       WHERE id = ANY($1::uuid[])
-       RETURNING *`,
-      [ids],
-    );
-    res.json(rows);
   } catch (err) {
     next(err);
   }

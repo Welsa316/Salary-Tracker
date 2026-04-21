@@ -12,14 +12,18 @@ const emit = defineEmits(['close']);
 const refresh = inject('refresh');
 
 const saving = ref(false);
+const error = ref(null);
 
 async function confirmPaid() {
   saving.value = true;
+  error.value = null;
   try {
     const ids = props.group.unpaid.map((s) => s.id);
     await api.bulkMarkPaid(ids);
     await refresh();
     emit('close');
+  } catch (err) {
+    error.value = err.message;
   } finally {
     saving.value = false;
   }
@@ -33,6 +37,10 @@ async function confirmPaid() {
       <div class="text-2xl font-bold">{{ money(group.total, settings?.currency) }}</div>
       <div class="text-sm text-ink/60">
         {{ group.unpaid.length }} session{{ group.unpaid.length === 1 ? '' : 's' }}
+      </div>
+
+      <div v-if="error" class="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+        {{ error }}
       </div>
 
       <div class="mt-5 space-y-2">
