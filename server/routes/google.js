@@ -41,7 +41,7 @@ router.get('/connect', requireAdmin, (req, res) => {
   res.redirect(g.authUrl(req, state));
 });
 
-router.get('/callback', requireAdmin, async (req, res, next) => {
+router.get('/callback', requireAdmin, async (req, res) => {
   const { code, state, error } = req.query;
   const expected = req.cookies?.g_state;
   res.clearCookie('g_state', { path: '/' });
@@ -57,9 +57,17 @@ router.get('/callback', requireAdmin, async (req, res, next) => {
       return res.redirect('/?google=no_refresh_token');
     }
 
-    // The primary calendar's id is the account email, and its timeZone is what
-    // we must stamp on events so they land at the right wall-clock time.
-    const cal = await g.calendarFetch(tokens.access_token, 'GET', '/calendars/primary');
+    const email = tokens.id_token ? g.emailFromIdToken(tokens.id_token) : null;
+
+    // Don't let a timezone hiccup throw away a perfectly good token — fall back
+    // and record it, since the zone is visible in Settings.
+    let timezone = null;
+    let warning = null;
+    try {
+      timezone = await g.fetchTimezone(tokens.access_token);
+    } catch (err) {
+      warning = `Could not read your calendar timezone (${err.message}). Events use UTC until reconnected.`;
+    }
 
     await db.query(
       `UPDATE settings
@@ -67,14 +75,16 @@ router.get('/callback', requireAdmin, async (req, res, next) => {
               google_calendar_id   = 'primary',
               google_email         = $2,
               google_timezone      = $3,
-              google_sync_error    = NULL
+              google_sync_error    = $4
         WHERE id = 1`,
-      [tokens.refresh_token, cal?.id || null, cal?.timeZone || 'UTC'],
+      [tokens.refresh_token, email, timezone || 'UTC', warning],
     );
 
     res.redirect('/?google=connected');
   } catch (err) {
-    next(err);
+    console.error('[google] callback failed:', err.message);
+    // Bounce back into the app rather than rendering a raw JSON error page.
+    res.redirect(`/?google=error&detail=${encodeURIComponent(err.message)}`);
   }
 });
 

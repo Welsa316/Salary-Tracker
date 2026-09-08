@@ -3,7 +3,16 @@ const db = require('./db');
 const AUTH_URL  = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const CAL_API   = 'https://www.googleapis.com/calendar/v3';
-const SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
+// calendar.events lets us manage only the events we create. Reading the
+// calendar's timezone needs its own narrow scope — calendar.readonly would also
+// work but grants read access to every calendar, which we don't need. openid +
+// email is just so we can show which account is connected.
+const SCOPE = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.settings.readonly',
+  'openid',
+  'email',
+].join(' ');
 
 // Scheduled days carry a start time but no end (you don't know how long you'll
 // stay), so events go on the calendar as a fixed-length placeholder block.
@@ -64,6 +73,25 @@ function refreshAccessToken(refresh_token) {
     client_secret: process.env.GOOGLE_CLIENT_SECRET,
     grant_type: 'refresh_token',
   });
+}
+
+// The id_token comes straight from Google's token endpoint over TLS in response
+// to our own client-authenticated request, so reading the claim without
+// verifying the signature is safe here — it is never attacker-supplied.
+function emailFromIdToken(idToken) {
+  try {
+    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString('utf8'));
+    return payload.email || null;
+  } catch {
+    return null;
+  }
+}
+
+// Events carry a naive local time, so they need the account's zone to land at
+// the right wall-clock hour.
+async function fetchTimezone(accessToken) {
+  const data = await calendarFetch(accessToken, 'GET', '/users/me/settings/timezone');
+  return data?.value || null;
 }
 
 async function getConnection() {
@@ -187,6 +215,8 @@ module.exports = {
   authUrl,
   exchangeCode,
   refreshAccessToken,
+  emailFromIdToken,
+  fetchTimezone,
   getConnection,
   setSyncError,
   disconnect,
