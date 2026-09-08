@@ -1,24 +1,32 @@
 const express = require('express');
 const db = require('../db');
 const { requireAdmin } = require('../auth');
+const { resolveStudentId } = require('../students');
 
 const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
+    const studentId = await resolveStudentId(req, res);
+    if (studentId === undefined) return;
+
     const { week } = req.query;
     let rows;
     if (week) {
       ({ rows } = await db.query(
         `SELECT * FROM schedule_days
-          WHERE day_date >= $1::date
-            AND day_date < ($1::date + INTERVAL '7 days')
+          WHERE student_id = $1
+            AND day_date >= $2::date
+            AND day_date < ($2::date + INTERVAL '7 days')
           ORDER BY day_date ASC, start_time ASC`,
-        [week],
+        [studentId, week],
       ));
     } else {
       ({ rows } = await db.query(
-        `SELECT * FROM schedule_days ORDER BY day_date ASC, start_time ASC`,
+        `SELECT * FROM schedule_days
+          WHERE student_id = $1
+          ORDER BY day_date ASC, start_time ASC`,
+        [studentId],
       ));
     }
     res.json(rows);
@@ -32,28 +40,33 @@ router.put('/week', requireAdmin, async (req, res, next) => {
   if (!week_start || !Array.isArray(days)) {
     return res.status(400).json({ error: 'week_start and days[] required' });
   }
+
+  const studentId = await resolveStudentId(req, res);
+  if (studentId === undefined) return;
+
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
 
     await client.query(
       `DELETE FROM schedule_days
-        WHERE day_date >= $1::date
-          AND day_date < ($1::date + INTERVAL '7 days')`,
-      [week_start],
+        WHERE student_id = $1
+          AND day_date >= $2::date
+          AND day_date < ($2::date + INTERVAL '7 days')`,
+      [studentId, week_start],
     );
 
     const inserted = [];
     for (const d of days) {
       if (!d?.day_date || !d?.start_time) continue;
       const { rows } = await client.query(
-        `INSERT INTO schedule_days (day_date, start_time)
-         VALUES ($1, $2)
-         ON CONFLICT (day_date) DO UPDATE
+        `INSERT INTO schedule_days (student_id, day_date, start_time)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (student_id, day_date) DO UPDATE
            SET start_time = EXCLUDED.start_time,
                updated_at = NOW()
          RETURNING *`,
-        [d.day_date, d.start_time],
+        [studentId, d.day_date, d.start_time],
       );
       inserted.push(rows[0]);
     }

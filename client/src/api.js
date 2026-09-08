@@ -13,7 +13,10 @@ async function request(method, url, body) {
 }
 
 function qs(params) {
-  const s = new URLSearchParams(params).toString();
+  const clean = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  );
+  const s = new URLSearchParams(clean).toString();
   return s ? '?' + s : '';
 }
 
@@ -21,19 +24,28 @@ export const api = {
   getSettings:   () => request('GET', '/api/settings'),
   putSettings:   (patch) => request('PUT', '/api/settings', patch),
 
-  getSessions:   (params = {}) => request('GET', `/api/sessions${qs(params)}`),
-  createSession: (data) => request('POST', '/api/sessions', data),
+  listStudents:  () => request('GET', '/api/students'),
+  getStudent:    (slug) => request('GET', `/api/students/${slug}`),
+  createStudent: (data) => request('POST', '/api/students', data),
+  updateStudent: (slug, data) => request('PUT', `/api/students/${slug}`, data),
+  deleteStudent: (slug) => request('DELETE', `/api/students/${slug}`),
+
+  getSessions:   (student, params = {}) =>
+    request('GET', `/api/sessions${qs({ ...params, student })}`),
+  createSession: (student, data) =>
+    request('POST', '/api/sessions', { ...data, student }),
   updateSession: (id, data) => request('PUT', `/api/sessions/${id}`, data),
   deleteSession: (id) => request('DELETE', `/api/sessions/${id}`),
   markPaid:      (id) => request('POST', `/api/sessions/${id}/paid`),
   markUnpaid:    (id) => request('POST', `/api/sessions/${id}/unpaid`),
   bulkMarkPaid:  (ids) => request('POST', '/api/sessions/bulk/paid', { ids }),
 
-  getSchedule:     (params = {}) => request('GET', `/api/schedule${qs(params)}`),
-  putScheduleWeek: (week_start, days) =>
-    request('PUT', '/api/schedule/week', { week_start, days }),
+  getSchedule:     (student, params = {}) =>
+    request('GET', `/api/schedule${qs({ ...params, student })}`),
+  putScheduleWeek: (student, week_start, days) =>
+    request('PUT', '/api/schedule/week', { student, week_start, days }),
 
-  getSummary:    () => request('GET', '/api/summary'),
+  getSummary:    (student) => request('GET', `/api/summary${qs({ student })}`),
 
   getMe:         () => request('GET', '/api/auth/me'),
   login:         (password) => request('POST', '/api/auth/login', { password }),

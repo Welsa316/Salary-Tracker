@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAdmin } = require('../auth');
+const { resolveStudentId } = require('../students');
 
 const router = express.Router();
 
@@ -10,16 +11,19 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-async function currentRate() {
-  const { rows } = await db.query('SELECT hourly_rate FROM settings WHERE id = 1');
-  return rows[0] ? Number(rows[0].hourly_rate) : 25;
+async function studentRate(studentId) {
+  const { rows } = await db.query('SELECT hourly_rate FROM students WHERE id = $1', [studentId]);
+  return rows[0] ? Number(rows[0].hourly_rate) : 30;
 }
 
 router.get('/', async (req, res, next) => {
   try {
+    const studentId = await resolveStudentId(req, res);
+    if (studentId === undefined) return;
+
     const { status, week } = req.query;
-    const clauses = [];
-    const params = [];
+    const params = [studentId];
+    const clauses = ['student_id = $1'];
 
     if (status === 'unpaid') {
       clauses.push('paid = false AND duration_hrs > 0');
@@ -62,16 +66,21 @@ router.post('/', requireAdmin, async (req, res, next) => {
   }
 
   try {
+    const studentId = await resolveStudentId(req, res);
+    if (studentId === undefined) return;
+
     const rate =
-      toNumberOrNull(rate_snapshot) !== null ? Number(rate_snapshot) : await currentRate();
+      toNumberOrNull(rate_snapshot) !== null
+        ? Number(rate_snapshot)
+        : await studentRate(studentId);
     const hours = toNumberOrNull(duration_hrs) ?? 0;
 
     const { rows } = await db.query(
       `INSERT INTO sessions
-         (session_date, start_time, end_time, duration_hrs, rate_snapshot, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
+         (student_id, session_date, start_time, end_time, duration_hrs, rate_snapshot, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [session_date, start_time || null, end_time || null, hours, rate, notes || null],
+      [studentId, session_date, start_time || null, end_time || null, hours, rate, notes || null],
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -84,6 +93,9 @@ router.post('/import', requireAdmin, async (req, res, next) => {
   if (!Array.isArray(sessions) || sessions.length === 0) {
     return res.status(400).json({ error: 'sessions[] required' });
   }
+  const studentId = await resolveStudentId(req, res);
+  if (studentId === undefined) return;
+
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
@@ -93,9 +105,10 @@ router.post('/import', requireAdmin, async (req, res, next) => {
       const paid = !!s.paid;
       await client.query(
         `INSERT INTO sessions
-           (session_date, start_time, end_time, duration_hrs, rate_snapshot, notes, paid, paid_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+           (student_id, session_date, start_time, end_time, duration_hrs, rate_snapshot, notes, paid, paid_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
+          studentId,
           s.session_date,
           s.start_time || null,
           s.end_time || null,
