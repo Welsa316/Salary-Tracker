@@ -50,4 +50,7 @@ export const api = {
   getMe:         () => request('GET', '/api/auth/me'),
   login:         (password) => request('POST', '/api/auth/login', { password }),
   logout:        () => request('POST', '/api/auth/logout'),
+
+  googleStatus:     () => request('GET', '/api/google/status'),
+  googleDisconnect: () => request('POST', '/api/google/disconnect'),
 };

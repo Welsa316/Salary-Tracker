@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, inject, computed } from 'vue';
+import { ref, watch, inject, computed, onMounted } from 'vue';
 import { api } from '../api';
 import { money } from '../utils';
 
@@ -97,6 +97,31 @@ async function doLogout() {
   navigate({ name: 'home' });
 }
 
+const google = ref(null);
+
+async function loadGoogle() {
+  if (!isAdmin.value) return;
+  try {
+    google.value = await api.googleStatus();
+  } catch {
+    google.value = null;
+  }
+}
+
+function connectGoogle() {
+  // Full page navigation: the OAuth consent screen can't run in fetch.
+  window.location.href = '/api/google/connect';
+}
+
+async function disconnectGoogle() {
+  if (!confirm('Disconnect Google Calendar? Existing events stay, but new schedule changes stop syncing.')) return;
+  await api.googleDisconnect();
+  await loadGoogle();
+}
+
+onMounted(loadGoogle);
+watch(isAdmin, loadGoogle);
+
 const currency = computed(() => form.value.currency);
 </script>
 
@@ -185,6 +210,43 @@ const currency = computed(() => form.value.currency);
           {{ saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save' }}
         </button>
       </form>
+
+      <div class="my-8 h-px bg-ink/10"></div>
+
+      <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-ink/50">
+        Google Calendar
+      </h2>
+
+      <div v-if="google && !google.configured" class="card px-4 py-4 text-sm text-ink/60">
+        Not configured on the server. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+        to enable calendar sync.
+      </div>
+
+      <div v-else-if="google?.connected" class="card px-4 py-4">
+        <div class="text-sm font-medium">Connected</div>
+        <div class="mt-1 break-all text-xs text-ink/60">{{ google.email }}</div>
+        <div class="mt-1 text-xs text-ink/50">
+          Times use {{ google.timezone }}. Each scheduled day is added as a
+          {{ google.event_minutes }}-minute block.
+        </div>
+        <div
+          v-if="google.sync_error"
+          class="mt-3 rounded-xl bg-red-50 p-3 text-xs text-red-700"
+        >
+          Last sync failed: {{ google.sync_error }}
+        </div>
+        <button class="btn-outline mt-3 w-full" @click="disconnectGoogle">Disconnect</button>
+      </div>
+
+      <div v-else-if="google" class="card px-4 py-4">
+        <p class="text-xs text-ink/60">
+          Push your planned schedule to Google Calendar. Saving a week creates,
+          updates, or removes the matching events automatically.
+        </p>
+        <button class="btn-primary mt-3 w-full" @click="connectGoogle">
+          Connect Google Calendar
+        </button>
+      </div>
 
       <div class="my-8 h-px bg-ink/10"></div>
 

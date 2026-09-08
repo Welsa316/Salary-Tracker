@@ -120,6 +120,17 @@ const STATEMENTS = [
 
   `CREATE INDEX IF NOT EXISTS idx_sessions_student ON sessions (student_id)`,
   `CREATE INDEX IF NOT EXISTS idx_schedule_days_student ON schedule_days (student_id)`,
+
+  // Google Calendar link. Single admin, single Google account, so this lives on
+  // the singleton settings row. The refresh token never leaves the server.
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS google_refresh_token TEXT`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS google_calendar_id TEXT NOT NULL DEFAULT 'primary'`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS google_email TEXT`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS google_timezone TEXT`,
+  `ALTER TABLE settings ADD COLUMN IF NOT EXISTS google_sync_error TEXT`,
+
+  // Lets an edited or cleared schedule day update / remove the right event.
+  `ALTER TABLE schedule_days ADD COLUMN IF NOT EXISTS google_event_id TEXT`,
 ];
 
 async function migrate() {
