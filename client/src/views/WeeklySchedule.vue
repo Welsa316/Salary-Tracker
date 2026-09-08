@@ -5,6 +5,7 @@ import { toISODate, startOfWeek, todayISO } from '../utils';
 
 const navigate = inject('navigate');
 const refresh  = inject('refresh');
+const studentSlug = inject('studentSlug');
 
 function computeDefaultWeek() {
   const today = new Date();
@@ -39,7 +40,7 @@ async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const rows = await api.getSchedule({ week: toISODate(weekStart.value) });
+    const rows = await api.getSchedule(studentSlug.value, { week: toISODate(weekStart.value) });
     const populated = {};
     for (const day of days.value) {
       const existing = rows.find((r) => String(r.day_date).slice(0, 10) === day.iso);
@@ -62,7 +63,7 @@ async function save() {
       const t = (form.value[day.iso] || '').trim();
       if (t) payload.push({ day_date: day.iso, start_time: t });
     }
-    await api.putScheduleWeek(toISODate(weekStart.value), payload);
+    await api.putScheduleWeek(studentSlug.value, toISODate(weekStart.value), payload);
     await refresh();
     navigate({ name: 'home' });
   } catch (err) {

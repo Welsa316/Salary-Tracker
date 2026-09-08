@@ -13,6 +13,7 @@ import {
 
 const props = defineProps({
   settings: Object,
+  student: Object,
   summary: Object,
   sessions: Array,
   schedule: Array,

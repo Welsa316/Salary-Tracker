@@ -5,12 +5,14 @@ import { money, todayISO, durationFromTimes, toDateInput } from '../utils';
 
 const props = defineProps({
   settings: Object,
+  student: Object,
   sessionId: String,
   sessions: Array,
 });
 
 const navigate = inject('navigate');
 const refresh  = inject('refresh');
+const studentSlug = inject('studentSlug');
 
 const isEdit = computed(() => !!props.sessionId);
 const mode = ref('times'); // 'times' | 'hours'
@@ -23,7 +25,7 @@ const form = ref({
   notes: '',
 });
 
-const rate = computed(() => Number(props.settings?.hourly_rate ?? 25));
+const rate = computed(() => Number(props.student?.hourly_rate ?? 30));
 const currency = computed(() => props.settings?.currency || 'USD');
 
 const duration = computed(() => {
@@ -81,7 +83,7 @@ async function save() {
     if (isEdit.value) {
       await api.updateSession(props.sessionId, payload);
     } else {
-      await api.createSession(payload);
+      await api.createSession(studentSlug.value, payload);
     }
     await refresh();
     navigate({ name: 'home' });
